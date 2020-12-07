@@ -8,20 +8,40 @@ from model import DB
 
 class Controller:
     def __init__(self):
-        self.model = load_model('mylib/facenet_keras.h5')
-        self.cascade = cv2.CascadeClassifier('mylib/haarcascade_frontalface_default.xml')
-        self.mask_model = load_model('mylib/facemask_keras.h5')
+
+        self.model = load_model('lib/facenet_keras.h5')
+
+        self.cascade = cv2.CascadeClassifier('lib/haarcascade_frontalface_default.xml')
+        self.mask_model = load_model('lib/model_mask_9954.h5')
         self.db = DB()
 
     def extract_face(self,img,size = (160,160)):
         try:
-            faces = self.cascade.detectMultiScale(img, 1.05, 5)
-            x,y,w,h = faces[0]
-            location = x,y,w,h
-            face =img[y:y+h,x:x+w]
-            face = cv2.resize(face,size)
-            
-        except:
+            height,width = img.shape[:2]
+
+            modelFile = "lib/opencv_face_detector_uint8.pb"
+            configFile = "lib/opencv_face_detector.pbtxt"
+            net = cv2.dnn.readNetFromTensorflow(modelFile, configFile)
+
+            blob = cv2.dnn.blobFromImage(img, 1.0, (300, 300), [104, 117, 123], False, False)
+
+            net.setInput(blob)
+            detections = net.forward()
+            confidence = detections[0, 0, 0, 2]
+            if confidence > 0.2:
+                x1 = int(detections[0, 0, 0, 3] * width)
+                y1 = int(detections[0, 0, 0, 4] * height)
+                x2 = int(detections[0, 0, 0, 5] * width)
+                y2 = int(detections[0, 0, 0, 6] * height)
+
+                location = x1,y1,x2-x1,y2-y1  
+                face =img[y1:y2,x1:x2]
+                face = cv2.resize(face,size)
+                # cv2.imshow('face',face)
+            else:
+                return None
+        except Exception as e:
+            print(e)
             return None
         return face, location
 
@@ -37,16 +57,22 @@ class Controller:
         id = []
         embeddings = []
         labels = []
-
+        num = 0
         results = self.db.find_all()
+        
         for result in results:
-            for embedding in result['embeddings']:
-                e = np.fromstring(embedding[1:-1],sep=' ')
-                
-                id.append(result['employee_id'])
-                labels.append(result['name'])
-                embeddings.append(e)
-
+            print(result)
+            try:
+                for embedding in result['embeddings']:
+                    print(num)
+                    num+=1
+                    e = np.fromstring(embedding[1:-1],sep=' ')
+                    
+                    id.append(result['employee_id'])
+                    labels.append(result['name'])
+                    embeddings.append(e)
+            except:
+                pass
         id  = np.asarray(id) 
         labels = np.asarray(labels)
         embeddings = np.array(embeddings)
@@ -69,9 +95,12 @@ class Controller:
     def update_person(self,data):
         return self.db.update_person(data) 
     
-    def find_all(self,data):
-        return self.db.find_all(data)  
+    def find_all(self):
+        return self.db.find_all()  
     
+    def get_one(self,data):
+        return self.db.get_one(data)
+
     def insert_image(self,data):
         return self.db.insert_image(data)
 
@@ -79,23 +108,22 @@ class Controller:
         if y==0:
             return "with_mask"
         else:
-            return "without_mask"
+            return "without_mask"   
+
 
 if __name__ == "__main__":
-    controller = Controller()
-
-    img = cv2.imread('imgs.png')
-    face,_ = controller.extract_face(img)
-    embedding = controller.get_embedding(face)
-    str_embedding = np.array_str(embedding)
-
-    data = (2,'bim',[str_embedding])
+    # arr1 = np.array([1,2,3,4,5,6])
+    # arr2 = np.array([1,2,3,4,5,6])
+    # arr1 = np.array_str(arr1)
+    # arr2 = np.array_str(arr2)
+    data = (4,'thanh',[])
    
-    controller.insert_person(data)
-
-    # id,embeddings,labels = controller.load_data()
-    # for e in labels:
-    #     print(e)
-    #     print(e.shape)
-
-    # print(labels.shape)
+    db = DB()
+    con = Controller()
+    con.insert_person(data)
+    # db.insert_person(data)
+    # res = db.find_all()
+    # for re in res:
+    #     print(re)
+        # re = con.get_one(1)
+        # print(re['name'])

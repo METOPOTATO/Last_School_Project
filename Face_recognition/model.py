@@ -38,6 +38,8 @@ class DB:
 
     def find_all(self):
         result = self.db.people.find({'embeddings':{'$exists':True}})
+        # result = self.db.people.find()
+        
         return result
 
     def insert_image(self,data):
@@ -49,16 +51,23 @@ class DB:
         )
         return result
 
+    def get_one(self,data):
+        result = self.db.people.find_one({'employee_id':data})
+        return result
+
 if __name__ == "__main__":
-    arr1 = np.array([1,2,3,4,5,6])
-    arr2 = np.array([1,2,3,4,5,6])
-    arr1 = np.array_str(arr1)
-    arr2 = np.array_str(arr2)
-    data = (1,'linh',[arr1,arr2])
-    # data = 1
+    # arr1 = np.array([1,2,3,4,5,6])
+    # arr2 = np.array([1,2,3,4,5,6])
+    # arr1 = np.array_str(arr1)
+    # arr2 = np.array_str(arr2)
+    # data = (1,'linh',[arr1,arr2])
+   
     db = DB()
-    # db.delete_person(data)
-    db.insert_person(data)
-    res = db.find_all()
-    for re in res:
-        print(re)
+
+    # db.insert_person(data)
+    # res = db.find_all()
+    # for re in res:
+    #     print(re)
+    # re = db.get_one(1)
+    # print(re['name'])
+    
